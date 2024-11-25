@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Online MNIST Recognition</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <!-- 在线加载 TensorFlow.js -->
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        user-select: none;
+        overflow: hidden;
+      }
+      #main {
+        display: flex;
+        height: 100vh;
+      }
+      .questions-column {
+        width: 33.33%;
+        display: grid;
+        grid-template-rows: repeat(5, 1fr);
+        gap: 10px;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+      .question-box {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px;
+        font-size: 22px;
+        font-weight: bold;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        height: 100%;
+        background-color: #fff;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      }
+      .question-box.selected {
+        background-color: #007bff;
+        color: white;
+        border-color: #007bff;
+      }
+      .answer {
+        margin-left: 10px;
+      }
+      .correct {
+        color: green;
+        font-weight: bold;
+      }
+      .incorrect {
+        color: red;
+        font-weight: bold;
+      }
+      #input-area {
+        position: fixed;
+        bottom: 0;
+        right: 0;
+        width: 33.33%;
+        height: 80%;
+        background-color: #f9f9f9;
+        border-left: 1px solid #ccc;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        align-items: center;
+      }
+      #canvas-container {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        border: 1px solid #ccc;
+        border-radius: 10px;
+        background: white;
+      }
+      #drawing-canvas {
+        width: 100%;
+        height: 100%;
+        border-radius: 10px;
+      }
+      .clear-button {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        padding: 10px;
+        background-color: #f44336;
+        color: white;
+        font-size: 16px;
+        font-weight: bold;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      .submit-button {
+        width: 100%;
+        height: 50px;
+        background-color: #4caf50;
+        color: white;
+        font-size: 24px;
+        font-weight: bold;
+        text-align: center;
+        line-height: 50px;
+        border: none;
+        border-radius: 0 0 10px 10px;
+        cursor: pointer;
+      }
+      .submit-button:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="main">
+      <div class="questions-column" id="column1"></div>
+      <div class="questions-column" id="column2"></div>
+      <div id="input-area">
+        <div id="canvas-container">
+          <canvas id="drawing-canvas"></canvas>
+          <button id="clear" class="clear-button">Clear</button>
+        </div>
+        <button id="submit" class="submit-button" disabled>✔</button>
+      </div>
+    </div>
+
+    <script>
+      let questions = [];
+      let selectedQuestion = 0;
+      let canvas, ctx, isDrawing;
+      let model; // TensorFlow.js model
+      let modelLoaded = false; // Model load state
+
+      // Initialize random questions for testing purposes
+      const generateRandomQuestions = () =>
+        Array.from({ length: 10 }, () => {
+          const num1 = Math.floor(Math.random() * 20) + 1;
+          const num2 = Math.floor(Math.random() * 20) + 1;
+          return {
+            question: `${num1} + ${num2} =`,
+            correctAnswer: num1 + num2,
+            userAnswer: null,
+          };
+        });
+
+      // Render questions on the screen
+      function renderQuestions() {
+        const column1 = document.getElementById("column1");
+        const column2 = document.getElementById("column2");
+        column1.innerHTML = "";
+        column2.innerHTML = "";
+        questions.forEach((item, index) => {
+          const questionDiv = document.createElement("div");
+          questionDiv.className = `question-box ${
+            index === selectedQuestion ? "selected" : ""
+          }`;
+          questionDiv.innerHTML = `
+            <span class="question-text">${item.question}</span>
+            ${
+              item.userAnswer !== null
+                ? `<span class="answer ${
+                    item.userAnswer === item.correctAnswer
+                      ? "correct"
+                      : "incorrect"
+                  }">${item.userAnswer} ${
+                    item.userAnswer === item.correctAnswer ? "✔" : "✘"
+                  }</span>`
+                : ""
+            }
+          `;
+          questionDiv.addEventListener("click", () => selectQuestion(index));
+          if (index < 5) {
+            column1.appendChild(questionDiv);
+          } else {
+            column2.appendChild(questionDiv);
+          }
+        });
+      }
+
+      function selectQuestion(index) {
+        selectedQuestion = index;
+        renderQuestions();
+      }
+
+      // Initialize the canvas for drawing
+      function setupCanvas() {
+        canvas = document.getElementById("drawing-canvas");
+        ctx = canvas.getContext("2d");
+        isDrawing = false;
+
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+
+        canvas.addEventListener("mousedown", startDrawing);
+        canvas.addEventListener("mouseup", stopDrawing);
+        canvas.addEventListener("mousemove", draw);
+
+        canvas.addEventListener("touchstart", (e) => {
+          e.preventDefault();
+          startDrawing(adjustTouchEvent(e));
+        });
+        canvas.addEventListener("touchend", (e) => {
+          e.preventDefault();
+          stopDrawing();
+        });
+        canvas.addEventListener("touchmove", (e) => {
+          e.preventDefault();
+          draw(adjustTouchEvent(e));
+        });
+      }
+
+      function adjustTouchEvent(e) {
+        if (e.touches.length > 0) {
+          const rect = canvas.getBoundingClientRect();
+          const touch = e.touches[0];
+          return {
+            offsetX: touch.clientX - rect.left,
+            offsetY: touch.clientY - rect.top,
+          };
+        }
+        return null;
+      }
+
+      function startDrawing(e) {
+        if (!e) return;
+        isDrawing = true;
+        const { offsetX, offsetY } = e;
+        ctx.beginPath();
+        ctx.moveTo(offsetX, offsetY);
+      }
+
+      function stopDrawing() {
+        if (isDrawing) {
+          isDrawing = false;
+          document.getElementById("submit").disabled = false;
+        }
+      }
+
+      function draw(e) {
+        if (!e || !isDrawing) return;
+
+        const { offsetX, offsetY } = e;
+        ctx.lineTo(offsetX, offsetY);
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 2;
+        ctx.lineCap = "round";
+        ctx.stroke();
+      }
+
+      // Clear the canvas
+      function clearCanvas() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        document.getElementById("submit").disabled = true;
+      }
+
+      // Load the TensorFlow.js model
+      async function loadModel() {
+        try {
+          console.log("Loading MNIST model...");
+          model = await tf.loadLayersModel("/models/mnist_model/model.json");
+          modelLoaded = true;
+          console.log("MNIST model loaded successfully!");
+        } catch (error) {
+          console.error("Error loading MNIST model:", error);
+        }
+      }
+
+      // Recognize handwriting with TensorFlow.js
+      async function recognizeHandwritingWithTensorFlow(canvas) {
+        console.log("Preparing image for prediction...");
+
+        // Resize the canvas to 8x8 (if the model expects 8x8 input)
+        const tempCanvas = document.createElement("canvas");
+        const tempCtx = tempCanvas.getContext("2d");
+        tempCanvas.width = 8; // Resize to 8x8
+        tempCanvas.height = 8; // Height of 8, width of 8 (total 64 pixels)
+
+        // Draw the canvas image into the temporary canvas
+        tempCtx.drawImage(canvas, 0, 0, 8, 8);
+
+        const imageData = tempCtx.getImageData(0, 0, 8, 8);
+
+        // Convert the image to a tensor and normalize the image
+        let tensor = tf.browser.fromPixels(imageData, 1).toFloat();
+        tensor = tensor.div(tf.scalar(255.0)); // Normalize the values between 0 and 1
+
+        // Flatten the tensor to shape [1, 64] (8x8 image flattened)
+        tensor = tensor.reshape([1, 64]);
+
+        // If the model expects 8 features, reduce the size (e.g., taking only the first 8 values)
+        tensor = tensor.slice([0, 0], [1, 8]);
+
+        console.log("Tensor shape:", tensor.shape);
+
+        if (!model) {
+          console.error("Model is not loaded. Please wait.");
+          return -1;
+        }
+
+        // Make the prediction
+        const prediction = model.predict(tensor);
+
+        // Log raw prediction values for debugging
+        const predictionData = prediction.dataSync();
+        console.log("Prediction probabilities:", predictionData);
+
+        // Get the predicted result (index of highest probability)
+        const result = prediction.argMax(1).dataSync()[0];
+        console.log("Recognized Number:", result);
+
+        return result;
+      }
+
+      // Submit the answer after recognizing handwriting
+      async function submitAnswer() {
+        if (!modelLoaded) {
+          console.log("Model not loaded yet. Please wait...");
+          return;
+        }
+
+        if (selectedQuestion !== null) {
+          const result = await recognizeHandwritingWithTensorFlow(canvas);
+          questions[selectedQuestion].userAnswer = result;
+
+          renderQuestions();
+          clearCanvas();
+
+          const nextUnanswered = questions.findIndex(
+            (q) => q.userAnswer === null
+          );
+          if (nextUnanswered !== -1) {
+            selectQuestion(nextUnanswered);
+          } else {
+            selectedQuestion = null;
+          }
+        }
+      }
+
+      // Event listeners for clear and submit buttons
+      document.getElementById("clear").addEventListener("click", clearCanvas);
+      document.getElementById("submit").addEventListener("click", submitAnswer);
+
+      // Initialize
+      setupCanvas();
+      questions = generateRandomQuestions();
+      renderQuestions();
+      loadModel();
+    </script>
+  </body>
+</html>
