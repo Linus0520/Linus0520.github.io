@@ -1,854 +1,807 @@
 <!DOCTYPE html>
 <html lang="zh">
-  <head>
+<head>
     <!-- Meta 信息 -->
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>数学练习示例</title>
     <style>
-      /* 样式部分 */
-      body {
-        font-family: Arial, sans-serif;
-        margin: 0;
-        padding: 0;
-        /* 调整布局，使内容充满屏幕 */
-        display: flex;
-        flex-direction: column;
-        min-height: 100vh;
-        background-color: #f3f3f3;
-      }
-      .container {
-        display: flex;
-        flex-direction: row;
-        width: 100%;
-        max-width: 1366px;
-        /* 使内容自适应高度 */
-        flex-grow: 1;
-        background-color: #ffffff;
-        margin: auto; /* 居中显示 */
-      }
-      .questions-area {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 2px 2px;
-        width: 68%; /* 调整宽度，使画布区域更靠右 */
-        padding: 5px;
-        background-color: #f9f9f9;
-        overflow-y: auto;
-      }
-      .question {
-        display: flex;
-        align-items: center;
-        padding: 0 2px;
-        background-color: #ffffff;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: background-color 0.3s ease;
-        height: 120px;
-        position: relative;
-        overflow: hidden;
-      }
-      .question.active,
-      .question:hover {
-        background-color: #e8f5e9;
-      }
-      .question .expression {
-        display: flex;
-        align-items: center;
-        width: 100%;
-        height: 100%;
-      }
-      .question .question-text {
-        font-size: 3vw;
-        font-weight: bold;
-        color: #333;
-        flex: 0 0 auto;
-        min-width: 80px;
-        margin-right: 5px;
-        line-height: 1;
-      }
-      .question .answer-container {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        height: 100%;
-        overflow: hidden;
-      }
-      .question .answer-img {
-        max-height: 100%;
-        width: auto;
-        height: auto;
-        object-fit: contain;
-      }
-      .question .answer-text {
-        font-size: 3vw;
-        font-weight: bold;
-        color: #333;
-        text-align: center;
-      }
-      .canvas-area {
-        display: flex;
-        flex-direction: column;
-        width: 32%; /* 调整宽度 */
-        padding: 2px;
-        background-color: #ffffff;
-      }
-      .page-navigation {
-        display: flex;
-        align-items: center;
-        margin-left: auto; /* 使其靠右对齐 */
-      }
-      .page-navigation button {
-        background-color: #add8e6; /* 淡蓝色背景 */
-        border: 1px solid #ccc;
-        border-radius: 8px;
-        padding: 6px 12px; /* 增大按钮尺寸 */
-        cursor: pointer;
-        margin: 0 5px;
-        font-size: 16px; /* 增大字体 */
-      }
-      /* 显示被选中的题目 */
-      .selected-question {
-        font-size: 5vw; /* 根据屏幕宽度自动调整 */
-        font-weight: bold;
-        color: #333;
-        margin: 20% 0 10px 0; /* 上下间距，增大与顶部的距离 */
-        text-align: center;
-      }
-      .tool-buttons {
-        display: flex;
-        justify-content: center;
-        margin-bottom: 5px;
-      }
-      .tool-buttons button {
-        background-color: #fff;
-        border: 1px solid #ccc;
-        border-radius: 50%;
-        width: 40px;
-        height: 40px;
-        margin: 0 5px;
-        cursor: pointer;
-        font-size: 20px;
-      }
-      .tool-buttons button.selected {
-        border: 2px solid #4caf50;
-        background-color: #e8f5e9;
-      }
-      .canvas-container {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        position: relative; /* 为了定位切换按钮 */
-        margin-top: auto; /* 将画布推到最底部 */
-      }
-      /* 输入区域，包含画布和数字输入组件 */
-      .input-area {
-        position: relative;
-        width: 95%;
-        max-width: 400px;
-        aspect-ratio: 1 / 1; /* 使其保持正方形 */
-        border: 2px solid #ccc;
-        border-radius: 8px;
-        margin-bottom: 10px;
-        overflow: hidden;
-      }
-      .input-area canvas {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-      }
-      /* 数字显示区域 */
-      .numeric-display {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 30%; /* 占据顶部30% */
-        display: none; /* 默认隐藏 */
-        font-size: 8vw; /* 调整数字显示的大小 */
-        font-weight: bold;
-        color: #333;
-        background-color: #fff;
-        align-items: center;
-        justify-content: center;
-        z-index: 2;
-      }
-      /* 数字键盘区域 */
-      .numeric-keypad {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        height: 70%; /* 占据底部70% */
-        display: none; /* 默认隐藏 */
-        background-color: rgba(255, 255, 255, 0.9);
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: center;
-        z-index: 1;
-      }
-      .numeric-keypad button {
-        width: 25%;
-        margin: 0.5%;
-        font-size: 3vw; /* 调整字体大小，使按钮更小 */
-        border: 1px solid #ccc;
-        border-radius: 8px;
-        cursor: pointer;
-        padding: 3px 0; /* 减小 padding */
-        background-color: #fff;
-      }
-      /* 切换输入模式的按钮样式 */
-      .toggle-input-mode {
-        position: absolute;
-        top: 5px;
-        left: 5px;
-        background-color: #fff;
-        border: 1px solid #ccc;
-        border-radius: 50%;
-        width: 30px;
-        height: 30px;
-        cursor: pointer;
-        font-size: 18px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 4; /* 确保按钮在最上层 */
-      }
-      .confirm-button {
-        background-color: #4caf50;
-        color: #fff;
-        border: none;
-        border-radius: 8px;
-        padding: 8px 40%;
-        cursor: pointer;
-        font-size: 16px;
-        transition: background-color 0.3s ease;
-      }
-      .confirm-button:hover {
-        background-color: #45a049;
-      }
+        /* 样式部分 */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            /* 调整布局，使内容充满屏幕 */
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background-color: #f3f3f3;
+        }
+        .container {
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+            max-width: 1366px;
+            max-height: 700px;
+            /* 使内容自适应高度 */
+            flex-grow: 1;
+            background-color: #ffffff;
+            margin: auto; /* 居中显示 */
+        }
+        .questions-area {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2px 2px;
+            width: 68%; /* 调整宽度，使画布区域更靠右 */
+            padding: 5px;
+            background-color: #f9f9f9;
+            overflow-y: auto;
+        }
+        .question {
+            display: flex;
+            align-items: center;
+            padding: 0 2px;
+            background-color: #ffffff;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            height: 100px;
+            position: relative;
+            overflow: hidden;
+        }
+        .question.active, .question:hover {
+            background-color: #e8f5e9;
+        }
+        .question .expression {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+        }
+        .question .question-text {
+            font-size: 3vw;
+            font-weight: bold;
+            color: #333;
+            flex: 0 0 auto;
+            min-width: 80px;
+            margin-right: 5px;
+            line-height: 1;
+        }
+        .question .answer-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            height: 100%;
+            overflow: hidden;
+        }
+        .question .answer-img {
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+        }
+        .question .answer-text {
+            font-size: 3vw;
+            font-weight: bold;
+            color: #333;
+            text-align: center;
+        }
+        .canvas-area {
+            display: flex;
+            flex-direction: column;
+            width: 32%; /* 调整宽度 */
+            padding-bottom: 100px;
+            background-color: #ffffff;
+        }
+        .page-navigation {
+            display: flex;
+            align-items: center;
+            margin-left: auto; /* 使其靠右对齐 */
+        }
+        .page-navigation button {
+            background-color: #add8e6; /* 淡蓝色背景 */
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 6px 12px; /* 增大按钮尺寸 */
+            cursor: pointer;
+            margin: 0 5px;
+            font-size: 16px; /* 增大字体 */
+        }
+        /* 显示被选中的题目 */
+        .selected-question {
+            font-size: 5vw; /* 根据屏幕宽度自动调整 */
+            font-weight: bold;
+            color: #333;
+            margin: 20% 0 10px 0; /* 上下间距，增大与顶部的距离 */
+            text-align: center;
+        }
+        .tool-buttons {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 5px;
+        }
+        .tool-buttons button {
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            margin: 0 5px;
+            cursor: pointer;
+            font-size: 20px;
+        }
+        .tool-buttons button.selected {
+            border: 2px solid #4caf50;
+            background-color: #e8f5e9;
+        }
+        .canvas-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative; /* 为了定位切换按钮 */
+            margin-top: auto; /* 将画布推到最底部 */
+        }
+        /* 输入区域，包含画布和数字输入组件 */
+        .input-area {
+            position: relative;
+            width: 95%;
+            max-width: 330px;
+            aspect-ratio: 1 / 1; /* 使其保持正方形 */
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+        .input-area canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        /* 数字显示区域 */
+        .numeric-display {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 30%; /* 占据顶部30% */
+            display: none; /* 默认隐藏 */
+            font-size: 8vw; /* 调整数字显示的大小 */
+            font-weight: bold;
+            color: #333;
+            background-color: #fff;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
+        }
+        /* 数字键盘区域 */
+        .numeric-keypad {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 70%; /* 占据底部70% */
+            display: none; /* 默认隐藏 */
+            background-color: rgba(255, 255, 255, 0.9);
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+        }
+        .numeric-keypad button {
+            width: 25%;
+            margin: 0.5%;
+            font-size: 3vw; /* 调整字体大小，使按钮更小 */
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            cursor: pointer;
+            padding: 3px 0; /* 减小 padding */
+            background-color: #fff;
+        }
+        /* 切换输入模式的按钮样式 */
+        .toggle-input-mode {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 4; /* 确保按钮在最上层 */
+        }
+        .confirm-button {
+            background-color: #4caf50;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 40%;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+        .confirm-button:hover {
+            background-color: #45a049;
+        }
     </style>
-  </head>
-  <body>
+</head>
+<body>
     <div class="container">
-      <!-- 题目区域 -->
-      <div class="questions-area" id="questions">
-        <!-- 动态生成题目 -->
-      </div>
+        <!-- 题目区域 -->
+        <div class="questions-area" id="questions">
+            <!-- 动态生成题目 -->
+        </div>
 
-      <!-- 画布区域 -->
-      <div class="canvas-area">
-        <!-- 翻页按钮 -->
-        <div class="page-navigation">
-          <button id="prev-page">上一页</button>
-          <span
-            >第 <span id="page-number">1</span>/<span id="total-pages">1</span>
-            页</span
-          >
-          <button id="next-page">下一页</button>
-        </div>
-        <!-- 显示被选中的题目 -->
-        <div class="selected-question"></div>
-        <!-- 画布和确认按钮容器 -->
-        <div class="canvas-container">
-          <!-- 切换输入模式的按钮 -->
-          <button id="toggle-input-mode" class="toggle-input-mode">🔄</button>
-          <!-- 工具按钮 -->
-          <div class="tool-buttons" id="tool-buttons">
-            <button id="pen-button">✎</button>
-            <button id="eraser-button">⌫</button>
-          </div>
-          <!-- 输入区域 -->
-          <div class="input-area">
-            <!-- 画布 -->
-            <canvas id="canvas"></canvas>
-            <!-- 数字输入显示框 -->
-            <div class="numeric-display" id="numeric-display"></div>
-            <!-- 数字输入键盘 -->
-            <div class="numeric-keypad" id="numeric-keypad">
-              <!-- 动态生成数字按钮 -->
+        <!-- 画布区域 -->
+        <div class="canvas-area">
+            <!-- 翻页按钮 -->
+            <div class="page-navigation">
+                <button id="prev-page">上一页</button>
+                <span>第 <span id="page-number">1</span>/<span id="total-pages">1</span> 页</span>
+                <button id="next-page">下一页</button>
             </div>
-          </div>
-          <button class="confirm-button" onclick="confirmAnswer()">
-            ✔ 确认
-          </button>
+            <!-- 显示被选中的题目 -->
+            <div class="selected-question"></div>
+            <!-- 画布和确认按钮容器 -->
+            <div class="canvas-container">
+                <!-- 切换输入模式的按钮 -->
+                <button id="toggle-input-mode" class="toggle-input-mode">🔄</button>
+                <!-- 工具按钮 -->
+                <div class="tool-buttons" id="tool-buttons">
+                    <button id="pen-button">✎</button>
+                    <button id="eraser-button">⌫</button>
+                </div>
+                <!-- 输入区域 -->
+                <div class="input-area">
+                    <!-- 画布 -->
+                    <canvas id="canvas"></canvas>
+                    <!-- 数字输入显示框 -->
+                    <div class="numeric-display" id="numeric-display"></div>
+                    <!-- 数字输入键盘 -->
+                    <div class="numeric-keypad" id="numeric-keypad">
+                        <!-- 动态生成数字按钮 -->
+                    </div>
+                </div>
+                <button class="confirm-button" onclick="confirmAnswer()">✔ 确认</button>
+            </div>
         </div>
-      </div>
     </div>
 
     <script>
-      const questionsContainer = document.getElementById("questions");
-      const canvas = document.getElementById("canvas");
-      const ctx = canvas.getContext("2d");
-      let drawing = false;
-      let activeQuestionIndex = null; // 初始不选中任何题目
-      let currentTool = "pen";
-      let currentPage = 0;
-      const totalQuestions = 50; // 总共50道题
-      const questionsPerPage = 10;
-      const totalPages = Math.ceil(totalQuestions / questionsPerPage);
-      let questions = [];
-      let strokes = [];
-      let currentStroke = null;
-      const strokesPerQuestion = {}; // 存储每个题目的笔画数据
-      const answersPerQuestion = {}; // 存储每个题目的答案图片数据 URL 或数字答案
+        const questionsContainer = document.getElementById('questions');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let drawing = false;
+        let activeQuestionIndex = null; // 初始不选中任何题目
+        let currentTool = 'pen';
+        let currentPage = 0;
+        const totalQuestions = 50; // 总共50道题
+        const questionsPerPage = 10;
+        const totalPages = Math.ceil(totalQuestions / questionsPerPage);
+        let questions = [];
+        let strokes = [];
+        let currentStroke = null;
+        const strokesPerQuestion = {}; // 存储每个题目的笔画数据
+        const answersPerQuestion = {}; // 存储每个题目的答案图片数据 URL 或数字答案
 
-      // 输入模式，默认为手写模式
-      let inputMode = "handwriting"; // 或者 'numeric'
+        // 输入模式，默认为手写模式
+        let inputMode = 'handwriting'; // 或者 'numeric'
 
-      // 调整画布分辨率
-      function setCanvasResolution() {
-        const rect = canvas.getBoundingClientRect();
-        const scale = window.devicePixelRatio || 1;
+        // 调整画布分辨率
+        function setCanvasResolution() {
+            const rect = canvas.getBoundingClientRect();
+            const scale = window.devicePixelRatio || 1;
 
-        canvas.width = rect.width * scale;
-        canvas.height = rect.height * scale;
-        ctx.scale(scale, scale);
-      }
-
-      // 生成题目
-      function generateQuestions() {
-        for (let i = 0; i < totalQuestions; i++) {
-          const num1 = Math.floor(Math.random() * 10) + 1;
-          const num2 = Math.floor(Math.random() * 10) + 1;
-          questions.push(`${num1} + ${num2}`);
+            canvas.width = rect.width * scale;
+            canvas.height = rect.height * scale;
+            ctx.scale(scale, scale);
         }
-      }
 
-      // 显示当前页的题目
-      function displayQuestions() {
-        questionsContainer.innerHTML = "";
-        let startIndex = currentPage * questionsPerPage;
-        let endIndex = Math.min(startIndex + questionsPerPage, totalQuestions);
+        // 生成题目
+        function generateQuestions() {
+            for (let i = 0; i < totalQuestions; i++) {
+                const num1 = Math.floor(Math.random() * 10) + 1;
+                const num2 = Math.floor(Math.random() * 10) + 1;
+                questions.push(`${num1} + ${num2}`);
+            }
+        }
 
-        // 调整题目顺序，从上到下排列
-        const columnCount = 2;
-        const rowCount = Math.ceil((endIndex - startIndex) / columnCount);
-        for (let row = 0; row < rowCount; row++) {
-          for (let col = 0; col < columnCount; col++) {
-            const index = startIndex + row + col * rowCount;
-            if (index >= endIndex) continue;
+        // 显示当前页的题目
+        function displayQuestions() {
+            questionsContainer.innerHTML = '';
+            let startIndex = currentPage * questionsPerPage;
+            let endIndex = Math.min(startIndex + questionsPerPage, totalQuestions);
 
-            const questionDiv = document.createElement("div");
-            questionDiv.className = "question";
-            questionDiv.innerHTML = `
+            // 调整题目顺序，从上到下排列
+            const columnCount = 2;
+            const rowCount = Math.ceil((endIndex - startIndex) / columnCount);
+            for (let row = 0; row < rowCount; row++) {
+                for (let col = 0; col < columnCount; col++) {
+                    const index = startIndex + row + col * rowCount;
+                    if (index >= endIndex) continue;
+
+                    const questionDiv = document.createElement('div');
+                    questionDiv.className = 'question';
+                    questionDiv.innerHTML = `
                         <div class="expression">
-                            <div class="question-text">${index + 1}. ${
-              questions[index]
-            } =</div>
+                            <div class="question-text">${index + 1}. ${questions[index]} =</div>
                             <div class="answer-container">
                                 <img id="answer-img-${index}" class="answer-img" src="" alt="">
                                 <div id="answer-text-${index}" class="answer-text"></div>
                             </div>
                         </div>
                     `;
-            questionDiv.addEventListener("click", () =>
-              setActiveQuestion(index)
-            );
-            questionsContainer.appendChild(questionDiv);
+                    questionDiv.addEventListener('click', () => setActiveQuestion(index));
+                    questionsContainer.appendChild(questionDiv);
 
-            // 如果存在答案，设置答案的显示
-            if (answersPerQuestion[index]) {
-              const answerData = answersPerQuestion[index];
-              const answerImg = questionDiv.querySelector(
-                `#answer-img-${index}`
-              );
-              const answerText = questionDiv.querySelector(
-                `#answer-text-${index}`
-              );
-              if (answerData.type === "image") {
-                answerImg.src = answerData.data;
-                answerImg.style.display = "block";
-                answerText.style.display = "none";
-              } else if (answerData.type === "text") {
-                answerText.textContent = answerData.data;
-                answerImg.style.display = "none";
-                answerText.style.display = "block";
-              }
+                    // 如果存在答案，设置答案的显示
+                    if (answersPerQuestion[index]) {
+                        const answerData = answersPerQuestion[index];
+                        const answerImg = questionDiv.querySelector(`#answer-img-${index}`);
+                        const answerText = questionDiv.querySelector(`#answer-text-${index}`);
+                        if (answerData.type === 'image') {
+                            answerImg.src = answerData.data;
+                            answerImg.style.display = 'block';
+                            answerText.style.display = 'none';
+                        } else if (answerData.type === 'text') {
+                            answerText.textContent = answerData.data;
+                            answerImg.style.display = 'none';
+                            answerText.style.display = 'block';
+                        }
+                    }
+                }
             }
-          }
-        }
-        document.getElementById("page-number").textContent = currentPage + 1;
-        document.getElementById("total-pages").textContent = totalPages; // 更新总页数显示
+            document.getElementById('page-number').textContent = currentPage + 1;
+            document.getElementById('total-pages').textContent = totalPages; // 更新总页数显示
 
-        highlightActiveQuestion();
+            highlightActiveQuestion();
 
-        // 检查当前页是否还有未完成的题目
-        const firstUnansweredIndex = getFirstUnansweredQuestionIndex();
-        if (firstUnansweredIndex !== null) {
-          setActiveQuestion(firstUnansweredIndex, false); // 不保存当前笔迹
-        } else {
-          // 如果所有题目都已完成，不选中任何题目
-          activeQuestionIndex = null;
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          strokes = [];
-          highlightActiveQuestion();
-          updateSelectedQuestionDisplay();
-        }
-      }
-
-      // 获取当前页第一个未完成的题目索引
-      function getFirstUnansweredQuestionIndex() {
-        let startIndex = currentPage * questionsPerPage;
-        let endIndex = Math.min(startIndex + questionsPerPage, totalQuestions);
-        for (let index = startIndex; index < endIndex; index++) {
-          if (!answersPerQuestion[index]) {
-            return index;
-          }
-        }
-        return null; // 当前页所有题目都已完成
-      }
-
-      // 设置激活的题目
-      function setActiveQuestion(index, saveStrokes = true) {
-        if (index >= 0 && index < totalQuestions) {
-          if (saveStrokes && activeQuestionIndex !== null) {
-            saveCurrentStrokes();
-          }
-          activeQuestionIndex = index;
-          highlightActiveQuestion();
-          // 重置画布或数字输入
-          if (inputMode === "handwriting") {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            strokes = [];
-            if (strokesPerQuestion[activeQuestionIndex]) {
-              strokes = strokesPerQuestion[activeQuestionIndex].slice();
-              redrawCanvas();
+            // 检查当前页是否还有未完成的题目
+            const firstUnansweredIndex = getFirstUnansweredQuestionIndex();
+            if (firstUnansweredIndex !== null) {
+                setActiveQuestion(firstUnansweredIndex, false); // 不保存当前笔迹
+            } else {
+                // 如果所有题目都已完成，不选中任何题目
+                activeQuestionIndex = null;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                strokes = [];
+                highlightActiveQuestion();
+                updateSelectedQuestionDisplay();
             }
-          } else if (inputMode === "numeric") {
-            numericInput = "";
-            if (
-              answersPerQuestion[activeQuestionIndex] &&
-              answersPerQuestion[activeQuestionIndex].type === "text"
-            ) {
-              numericInput = answersPerQuestion[activeQuestionIndex].data;
+        }
+
+        // 获取当前页第一个未完成的题目索引
+        function getFirstUnansweredQuestionIndex() {
+            let startIndex = currentPage * questionsPerPage;
+            let endIndex = Math.min(startIndex + questionsPerPage, totalQuestions);
+            for (let index = startIndex; index < endIndex; index++) {
+                if (!answersPerQuestion[index]) {
+                    return index;
+                }
             }
-            updateNumericDisplay();
-          }
-          updateSelectedQuestionDisplay();
+            return null; // 当前页所有题目都已完成
         }
-      }
 
-      // 更新显示被选中的题目
-      function updateSelectedQuestionDisplay() {
-        const selectedQuestionDiv =
-          document.querySelector(".selected-question");
-        if (activeQuestionIndex !== null) {
-          selectedQuestionDiv.textContent =
-            questions[activeQuestionIndex] + " =";
-        } else {
-          selectedQuestionDiv.textContent = "";
+        // 设置激活的题目
+        function setActiveQuestion(index, saveStrokes = true) {
+            if (index >= 0 && index < totalQuestions) {
+                if (saveStrokes && activeQuestionIndex !== null) {
+                    saveCurrentStrokes();
+                }
+                activeQuestionIndex = index;
+                highlightActiveQuestion();
+                // 重置画布或数字输入
+                if (inputMode === 'handwriting') {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    strokes = [];
+                    if (strokesPerQuestion[activeQuestionIndex]) {
+                        strokes = strokesPerQuestion[activeQuestionIndex].slice();
+                        redrawCanvas();
+                    }
+                } else if (inputMode === 'numeric') {
+                    numericInput = '';
+                    if (answersPerQuestion[activeQuestionIndex] && answersPerQuestion[activeQuestionIndex].type === 'text') {
+                        numericInput = answersPerQuestion[activeQuestionIndex].data;
+                    }
+                    updateNumericDisplay();
+                }
+                updateSelectedQuestionDisplay();
+            }
         }
-      }
 
-      // 高亮当前激活的题目
-      function highlightActiveQuestion() {
-        document.querySelectorAll(".question").forEach((q) => {
-          q.classList.remove("active");
+        // 更新显示被选中的题目
+        function updateSelectedQuestionDisplay() {
+            const selectedQuestionDiv = document.querySelector('.selected-question');
+            if (activeQuestionIndex !== null) {
+                selectedQuestionDiv.textContent = questions[activeQuestionIndex] + ' =';
+            } else {
+                selectedQuestionDiv.textContent = '';
+            }
+        }
+
+        // 高亮当前激活的题目
+        function highlightActiveQuestion() {
+            document.querySelectorAll('.question').forEach((q) => {
+                q.classList.remove('active');
+            });
+            if (activeQuestionIndex !== null) {
+                const questionDivs = document.querySelectorAll('.question');
+                for (let i = 0; i < questionDivs.length; i++) {
+                    const indexText = questionDivs[i].querySelector('.question-text').textContent;
+                    const index = parseInt(indexText.split('.')[0]) - 1;
+                    if (index === activeQuestionIndex) {
+                        questionDivs[i].classList.add('active');
+                        break;
+                    }
+                }
+            }
+        }
+
+        // 工具按钮事件
+        const penButton = document.getElementById('pen-button');
+        const eraserButton = document.getElementById('eraser-button');
+        penButton.classList.add('selected');
+
+        penButton.addEventListener('click', () => {
+            currentTool = 'pen';
+            penButton.classList.add('selected');
+            eraserButton.classList.remove('selected');
         });
-        if (activeQuestionIndex !== null) {
-          const questionDivs = document.querySelectorAll(".question");
-          for (let i = 0; i < questionDivs.length; i++) {
-            const indexText =
-              questionDivs[i].querySelector(".question-text").textContent;
-            const index = parseInt(indexText.split(".")[0]) - 1;
-            if (index === activeQuestionIndex) {
-              questionDivs[i].classList.add("active");
-              break;
+        eraserButton.addEventListener('click', () => {
+            currentTool = 'eraser';
+            eraserButton.classList.add('selected');
+            penButton.classList.remove('selected');
+        });
+
+        // 切换输入模式按钮事件
+        const toggleInputModeButton = document.getElementById('toggle-input-mode');
+        toggleInputModeButton.addEventListener('click', toggleInputMode);
+
+        function toggleInputMode() {
+            if (inputMode === 'handwriting') {
+                inputMode = 'numeric';
+                // 隐藏手写相关元素
+                canvas.style.display = 'none';
+                document.getElementById('tool-buttons').style.display = 'none';
+                // 显示数字输入相关元素
+                document.getElementById('numeric-display').style.display = 'flex';
+                document.getElementById('numeric-keypad').style.display = 'flex';
+                // 初始化数字输入
+                numericInput = '';
+                if (answersPerQuestion[activeQuestionIndex] && answersPerQuestion[activeQuestionIndex].type === 'text') {
+                    numericInput = answersPerQuestion[activeQuestionIndex].data;
+                }
+                updateNumericDisplay();
+            } else {
+                inputMode = 'handwriting';
+                // 显示手写相关元素
+                canvas.style.display = 'block';
+                document.getElementById('tool-buttons').style.display = 'flex';
+                // 隐藏数字输入相关元素
+                document.getElementById('numeric-display').style.display = 'none';
+                document.getElementById('numeric-keypad').style.display = 'none';
             }
-          }
         }
-      }
 
-      // 工具按钮事件
-      const penButton = document.getElementById("pen-button");
-      const eraserButton = document.getElementById("eraser-button");
-      penButton.classList.add("selected");
+        // 数字输入相关
+        let numericInput = '';
+        const numericDisplay = document.getElementById('numeric-display');
+        const numericKeypad = document.getElementById('numeric-keypad');
 
-      penButton.addEventListener("click", () => {
-        currentTool = "pen";
-        penButton.classList.add("selected");
-        eraserButton.classList.remove("selected");
-      });
-      eraserButton.addEventListener("click", () => {
-        currentTool = "eraser";
-        eraserButton.classList.add("selected");
-        penButton.classList.remove("selected");
-      });
-
-      // 切换输入模式按钮事件
-      const toggleInputModeButton =
-        document.getElementById("toggle-input-mode");
-      toggleInputModeButton.addEventListener("click", toggleInputMode);
-
-      function toggleInputMode() {
-        if (inputMode === "handwriting") {
-          inputMode = "numeric";
-          // 隐藏手写相关元素
-          canvas.style.display = "none";
-          document.getElementById("tool-buttons").style.display = "none";
-          // 显示数字输入相关元素
-          document.getElementById("numeric-display").style.display = "flex";
-          document.getElementById("numeric-keypad").style.display = "flex";
-          // 初始化数字输入
-          numericInput = "";
-          if (
-            answersPerQuestion[activeQuestionIndex] &&
-            answersPerQuestion[activeQuestionIndex].type === "text"
-          ) {
-            numericInput = answersPerQuestion[activeQuestionIndex].data;
-          }
-          updateNumericDisplay();
-        } else {
-          inputMode = "handwriting";
-          // 显示手写相关元素
-          canvas.style.display = "block";
-          document.getElementById("tool-buttons").style.display = "flex";
-          // 隐藏数字输入相关元素
-          document.getElementById("numeric-display").style.display = "none";
-          document.getElementById("numeric-keypad").style.display = "none";
-        }
-      }
-
-      // 数字输入相关
-      let numericInput = "";
-      const numericDisplay = document.getElementById("numeric-display");
-      const numericKeypad = document.getElementById("numeric-keypad");
-
-      // 生成数字按钮
-      function generateNumericKeypad() {
-        numericKeypad.innerHTML = "";
-        for (let i = 1; i <= 9; i++) {
-          const button = document.createElement("button");
-          button.textContent = i;
-          button.addEventListener("click", () => addNumericInput(i));
-          numericKeypad.appendChild(button);
-        }
-        // 添加 0 按钮
-        const zeroButton = document.createElement("button");
-        zeroButton.textContent = 0;
-        zeroButton.addEventListener("click", () => addNumericInput(0));
-        numericKeypad.appendChild(zeroButton);
-        // 添加删除按钮
-        const deleteButton = document.createElement("button");
-        deleteButton.textContent = "⌫";
-        deleteButton.addEventListener("click", deleteNumericInput);
-        numericKeypad.appendChild(deleteButton);
-      }
-
-      function addNumericInput(value) {
-        numericInput += value.toString();
-        updateNumericDisplay();
-      }
-
-      function deleteNumericInput() {
-        numericInput = numericInput.slice(0, -1);
-        updateNumericDisplay();
-      }
-
-      function updateNumericDisplay() {
-        numericDisplay.textContent = numericInput;
-      }
-
-      // 优化绘制性能
-      let lastPos = { x: 0, y: 0 };
-      function getCanvasPosition(event) {
-        const rect = canvas.getBoundingClientRect();
-        let x, y;
-        if (event.touches && event.touches[0]) {
-          x = event.touches[0].clientX - rect.left;
-          y = event.touches[0].clientY - rect.top;
-        } else {
-          x = event.clientX - rect.left;
-          y = event.clientY - rect.top;
-        }
-        return { x, y };
-      }
-
-      function startDrawing(event) {
-        if (activeQuestionIndex === null) {
-          alert("请选择一个题目进行作答！");
-          return;
-        }
-        if (inputMode !== "handwriting") return;
-        drawing = true;
-        const pos = getCanvasPosition(event);
-        lastPos = pos;
-        currentStroke = {
-          tool: currentTool,
-          points: [pos],
-        };
-      }
-
-      function stopDrawing() {
-        if (drawing && currentStroke) {
-          strokes.push(currentStroke);
-        }
-        drawing = false;
-        currentStroke = null;
-      }
-
-      function draw(event) {
-        if (!drawing) return;
-        event.preventDefault(); // 防止滚动
-        const pos = getCanvasPosition(event);
-
-        if (currentTool === "eraser") {
-          eraseStrokeAt(pos);
-        } else {
-          ctx.lineCap = "round";
-          ctx.globalCompositeOperation = "source-over";
-          ctx.strokeStyle = "#000";
-          ctx.lineWidth = 8;
-
-          ctx.beginPath();
-          ctx.moveTo(lastPos.x, lastPos.y);
-          ctx.lineTo(pos.x, pos.y);
-          ctx.stroke();
-
-          lastPos = pos;
-          currentStroke.points.push(pos);
-        }
-      }
-
-      function eraseStrokeAt(pos) {
-        const eraserRadius = 10;
-        let strokeErased = false;
-
-        for (let i = strokes.length - 1; i >= 0; i--) {
-          const stroke = strokes[i];
-          for (let j = 0; j < stroke.points.length; j++) {
-            const point = stroke.points[j];
-            const dx = point.x - pos.x;
-            const dy = point.y - pos.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            if (distance <= eraserRadius) {
-              strokes.splice(i, 1);
-              strokeErased = true;
-              break;
+        // 生成数字按钮
+        function generateNumericKeypad() {
+            numericKeypad.innerHTML = '';
+            for (let i = 1; i <= 9; i++) {
+                const button = document.createElement('button');
+                button.textContent = i;
+                button.addEventListener('click', () => addNumericInput(i));
+                numericKeypad.appendChild(button);
             }
-          }
-          if (strokeErased) break;
+            // 添加 0 按钮
+            const zeroButton = document.createElement('button');
+            zeroButton.textContent = 0;
+            zeroButton.addEventListener('click', () => addNumericInput(0));
+            numericKeypad.appendChild(zeroButton);
+            // 添加删除按钮
+            const deleteButton = document.createElement('button');
+            deleteButton.textContent = '⌫';
+            deleteButton.addEventListener('click', deleteNumericInput);
+            numericKeypad.appendChild(deleteButton);
         }
 
-        if (strokeErased) {
-          redrawCanvas();
+        function addNumericInput(value) {
+            numericInput += value.toString();
+            updateNumericDisplay();
         }
-      }
 
-      function redrawCanvas() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.lineCap = "round";
-        ctx.globalCompositeOperation = "source-over";
+        function deleteNumericInput() {
+            numericInput = numericInput.slice(0, -1);
+            updateNumericDisplay();
+        }
 
-        for (const stroke of strokes) {
-          if (stroke.tool === "pen") {
-            ctx.strokeStyle = "#000";
-            ctx.lineWidth = 8;
-          } else {
-            continue;
-          }
+        function updateNumericDisplay() {
+            numericDisplay.textContent = numericInput;
+        }
 
-          ctx.beginPath();
-          const points = stroke.points;
-          if (points.length > 0) {
-            ctx.moveTo(points[0].x, points[0].y);
-            for (let i = 1; i < points.length; i++) {
-              ctx.lineTo(points[i].x, points[i].y);
+        // 优化绘制性能
+        let lastPos = { x: 0, y: 0 };
+        function getCanvasPosition(event) {
+            const rect = canvas.getBoundingClientRect();
+            let x, y;
+            if (event.touches && event.touches[0]) {
+                x = event.touches[0].clientX - rect.left;
+                y = event.touches[0].clientY - rect.top;
+            } else {
+                x = event.clientX - rect.left;
+                y = event.clientY - rect.top;
             }
-            ctx.stroke();
-          }
-        }
-      }
-
-      function saveCurrentStrokes() {
-        if (activeQuestionIndex !== null) {
-          strokesPerQuestion[activeQuestionIndex] = strokes.slice();
-        }
-      }
-
-      // 确认答案
-      function confirmAnswer() {
-        if (activeQuestionIndex === null) {
-          alert("请选择一个题目进行作答！");
-          return;
+            return { x, y };
         }
 
-        if (inputMode === "handwriting") {
-          saveCurrentStrokes();
+        function startDrawing(event) {
+            if (activeQuestionIndex === null) {
+                alert("请选择一个题目进行作答！");
+                return;
+            }
+            if (inputMode !== 'handwriting') return;
+            drawing = true;
+            const pos = getCanvasPosition(event);
+            lastPos = pos;
+            currentStroke = {
+                tool: currentTool,
+                points: [pos],
+            };
+        }
 
-          // 计算笔迹的边界框
-          const boundingBox = getStrokesBoundingBox(strokes);
-          if (boundingBox) {
-            const { minX, minY, maxX, maxY } = boundingBox;
-            const padding = 10; // 添加10像素的间距
-            const width = maxX - minX + padding * 2;
-            const height = maxY - minY + padding * 2;
+        function stopDrawing() {
+            if (drawing && currentStroke) {
+                strokes.push(currentStroke);
+            }
+            drawing = false;
+            currentStroke = null;
+        }
 
-            // 创建一个新的画布，大小为笔迹的区域
-            const tempCanvas = document.createElement("canvas");
-            tempCanvas.width = width;
-            tempCanvas.height = height;
-            const tempCtx = tempCanvas.getContext("2d");
+        function draw(event) {
+            if (!drawing) return;
+            event.preventDefault(); // 防止滚动
+            const pos = getCanvasPosition(event);
 
-            // 将笔迹重绘到新的画布上
-            tempCtx.lineCap = "round";
-            tempCtx.globalCompositeOperation = "source-over";
-            tempCtx.strokeStyle = "#000";
-            tempCtx.lineWidth = 8;
+            if (currentTool === 'eraser') {
+                eraseStrokeAt(pos);
+            } else {
+                ctx.lineCap = 'round';
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 8;
+
+                ctx.beginPath();
+                ctx.moveTo(lastPos.x, lastPos.y);
+                ctx.lineTo(pos.x, pos.y);
+                ctx.stroke();
+
+                lastPos = pos;
+                currentStroke.points.push(pos);
+            }
+        }
+
+        function eraseStrokeAt(pos) {
+            const eraserRadius = 10;
+            let strokeErased = false;
+
+            for (let i = strokes.length - 1; i >= 0; i--) {
+                const stroke = strokes[i];
+                for (let j = 0; j < stroke.points.length; j++) {
+                    const point = stroke.points[j];
+                    const dx = point.x - pos.x;
+                    const dy = point.y - pos.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    if (distance <= eraserRadius) {
+                        strokes.splice(i, 1);
+                        strokeErased = true;
+                        break;
+                    }
+                }
+                if (strokeErased) break;
+            }
+
+            if (strokeErased) {
+                redrawCanvas();
+            }
+        }
+
+        function redrawCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.lineCap = 'round';
+            ctx.globalCompositeOperation = 'source-over';
 
             for (const stroke of strokes) {
-              if (stroke.tool === "pen") {
-                tempCtx.beginPath();
+                if (stroke.tool === 'pen') {
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 8;
+                } else {
+                    continue;
+                }
+
+                ctx.beginPath();
                 const points = stroke.points;
                 if (points.length > 0) {
-                  tempCtx.moveTo(
-                    points[0].x - minX + padding,
-                    points[0].y - minY + padding
-                  );
-                  for (let i = 1; i < points.length; i++) {
-                    tempCtx.lineTo(
-                      points[i].x - minX + padding,
-                      points[i].y - minY + padding
-                    );
-                  }
-                  tempCtx.stroke();
+                    ctx.moveTo(points[0].x, points[0].y);
+                    for (let i = 1; i < points.length; i++) {
+                        ctx.lineTo(points[i].x, points[i].y);
+                    }
+                    ctx.stroke();
                 }
-              }
+            }
+        }
+
+        function saveCurrentStrokes() {
+            if (activeQuestionIndex !== null) {
+                strokesPerQuestion[activeQuestionIndex] = strokes.slice();
+            }
+        }
+
+        // 确认答案
+        function confirmAnswer() {
+            if (activeQuestionIndex === null) {
+                alert("请选择一个题目进行作答！");
+                return;
             }
 
-            // 将裁剪后的画布转换为图像，保存答案
-            const imgData = tempCanvas.toDataURL();
-            answersPerQuestion[activeQuestionIndex] = {
-              type: "image",
-              data: imgData,
-            };
-          } else {
-            // 如果没有笔迹，清空答案
-            delete answersPerQuestion[activeQuestionIndex];
-          }
-        } else if (inputMode === "numeric") {
-          if (numericInput !== "") {
-            answersPerQuestion[activeQuestionIndex] = {
-              type: "text",
-              data: numericInput,
-            };
-          } else {
-            // 如果没有输入，清空答案
-            delete answersPerQuestion[activeQuestionIndex];
-          }
+            if (inputMode === 'handwriting') {
+                saveCurrentStrokes();
+
+                // 计算笔迹的边界框
+                const boundingBox = getStrokesBoundingBox(strokes);
+                if (boundingBox) {
+                    const { minX, minY, maxX, maxY } = boundingBox;
+                    const padding = 10; // 添加10像素的间距
+                    const width = maxX - minX + padding * 2;
+                    const height = maxY - minY + padding * 2;
+
+                    // 创建一个新的画布，大小为笔迹的区域
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = width;
+                    tempCanvas.height = height;
+                    const tempCtx = tempCanvas.getContext('2d');
+
+                    // 将笔迹重绘到新的画布上
+                    tempCtx.lineCap = 'round';
+                    tempCtx.globalCompositeOperation = 'source-over';
+                    tempCtx.strokeStyle = '#000';
+                    tempCtx.lineWidth = (maxY-minY)*5/100;
+
+                    for (const stroke of strokes) {
+                        if (stroke.tool === 'pen') {
+                            tempCtx.beginPath();
+                            const points = stroke.points;
+                            if (points.length > 0) {
+                                tempCtx.moveTo(points[0].x - minX + padding, points[0].y - minY + padding);
+                                for (let i = 1; i < points.length; i++) {
+                                    tempCtx.lineTo(points[i].x - minX + padding, points[i].y - minY + padding);
+                                }
+                                tempCtx.stroke();
+                            }
+                        }
+                    }
+
+                    // 将裁剪后的画布转换为图像，保存答案
+                    const imgData = tempCanvas.toDataURL();
+                    answersPerQuestion[activeQuestionIndex] = { type: 'image', data: imgData };
+                } else {
+                    // 如果没有笔迹，清空答案
+                    delete answersPerQuestion[activeQuestionIndex];
+                }
+            } else if (inputMode === 'numeric') {
+                if (numericInput !== '') {
+                    answersPerQuestion[activeQuestionIndex] = { type: 'text', data: numericInput };
+                } else {
+                    // 如果没有输入，清空答案
+                    delete answersPerQuestion[activeQuestionIndex];
+                }
+            }
+
+            // 更新答案显示
+            const answerContainer = document.querySelector(`#answer-img-${activeQuestionIndex}`).parentNode;
+            const answerImg = answerContainer.querySelector(`#answer-img-${activeQuestionIndex}`);
+            const answerText = answerContainer.querySelector(`#answer-text-${activeQuestionIndex}`);
+            const answerData = answersPerQuestion[activeQuestionIndex];
+
+            if (answerData) {
+                if (answerData.type === 'image') {
+                    answerImg.src = answerData.data;
+                    answerImg.style.display = 'block';
+                    answerText.style.display = 'none';
+                } else if (answerData.type === 'text') {
+                    answerText.textContent = answerData.data;
+                    answerImg.style.display = 'none';
+                    answerText.style.display = 'block';
+                }
+            } else {
+                answerImg.src = '';
+                answerText.textContent = '';
+            }
+
+            // 检查是否是当前页的最后一题
+            const startIndex = currentPage * questionsPerPage;
+            const endIndex = Math.min(startIndex + questionsPerPage, totalQuestions);
+            if (activeQuestionIndex < endIndex - 1) {
+                // 还有下一题，激活下一题
+                setActiveQuestion(activeQuestionIndex + 1);
+            } else {
+                // 当前页已完成最后一题，不自动跳转到下一页，不显示弹窗
+                // 不选中任何题目
+                activeQuestionIndex = null;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                strokes = [];
+                numericInput = '';
+                highlightActiveQuestion();
+                updateSelectedQuestionDisplay();
+            }
         }
 
-        // 更新答案显示
-        const answerContainer = document.querySelector(
-          `#answer-img-${activeQuestionIndex}`
-        ).parentNode;
-        const answerImg = answerContainer.querySelector(
-          `#answer-img-${activeQuestionIndex}`
-        );
-        const answerText = answerContainer.querySelector(
-          `#answer-text-${activeQuestionIndex}`
-        );
-        const answerData = answersPerQuestion[activeQuestionIndex];
-
-        if (answerData) {
-          if (answerData.type === "image") {
-            answerImg.src = answerData.data;
-            answerImg.style.display = "block";
-            answerText.style.display = "none";
-          } else if (answerData.type === "text") {
-            answerText.textContent = answerData.data;
-            answerImg.style.display = "none";
-            answerText.style.display = "block";
-          }
-        } else {
-          answerImg.src = "";
-          answerText.textContent = "";
+        // 计算笔迹的边界框
+        function getStrokesBoundingBox(strokes) {
+            if (strokes.length === 0) return null;
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            for (const stroke of strokes) {
+                for (const point of stroke.points) {
+                    if (point.x < minX) minX = point.x;
+                    if (point.y < minY) minY = point.y;
+                    if (point.x > maxX) maxX = point.x;
+                    if (point.y > maxY) maxY = point.y;
+                }
+            }
+            return { minX, minY, maxX, maxY };
         }
 
-        // 检查是否是当前页的最后一题
-        const startIndex = currentPage * questionsPerPage;
-        const endIndex = Math.min(
-          startIndex + questionsPerPage,
-          totalQuestions
-        );
-        if (activeQuestionIndex < endIndex - 1) {
-          // 还有下一题，激活下一题
-          setActiveQuestion(activeQuestionIndex + 1);
-        } else {
-          // 当前页已完成最后一题，不自动跳转到下一页，不显示弹窗
-          // 不选中任何题目
-          activeQuestionIndex = null;
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          strokes = [];
-          numericInput = "";
-          highlightActiveQuestion();
-          updateSelectedQuestionDisplay();
-        }
-      }
+        // 绑定翻页按钮事件
+        document.getElementById('prev-page').addEventListener('click', () => {
+            if (currentPage > 0) {
+                if (inputMode === 'handwriting') saveCurrentStrokes();
+                currentPage--;
+                displayQuestions();
+            }
+        });
 
-      // 计算笔迹的边界框
-      function getStrokesBoundingBox(strokes) {
-        if (strokes.length === 0) return null;
-        let minX = Infinity,
-          minY = Infinity,
-          maxX = -Infinity,
-          maxY = -Infinity;
-        for (const stroke of strokes) {
-          for (const point of stroke.points) {
-            if (point.x < minX) minX = point.x;
-            if (point.y < minY) minY = point.y;
-            if (point.x > maxX) maxX = point.x;
-            if (point.y > maxY) maxY = point.y;
-          }
-        }
-        return { minX, minY, maxX, maxY };
-      }
+        document.getElementById('next-page').addEventListener('click', () => {
+            if (currentPage < totalPages - 1) {
+                if (inputMode === 'handwriting') saveCurrentStrokes();
+                currentPage++;
+                displayQuestions();
+            }
+        });
 
-      // 绑定翻页按钮事件
-      document.getElementById("prev-page").addEventListener("click", () => {
-        if (currentPage > 0) {
-          if (inputMode === "handwriting") saveCurrentStrokes();
-          currentPage--;
-          displayQuestions();
-        }
-      });
+        // 绑定事件
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+        canvas.addEventListener('mousemove', draw);
 
-      document.getElementById("next-page").addEventListener("click", () => {
-        if (currentPage < totalPages - 1) {
-          if (inputMode === "handwriting") saveCurrentStrokes();
-          currentPage++;
-          displayQuestions();
-        }
-      });
+        canvas.addEventListener('touchstart', startDrawing);
+        canvas.addEventListener('touchend', stopDrawing);
+        canvas.addEventListener('touchcancel', stopDrawing);
+        canvas.addEventListener('touchmove', draw);
 
-      // 绑定事件
-      canvas.addEventListener("mousedown", startDrawing);
-      canvas.addEventListener("mouseup", stopDrawing);
-      canvas.addEventListener("mouseout", stopDrawing);
-      canvas.addEventListener("mousemove", draw);
+        // 初始化
+        setCanvasResolution();
+        generateQuestions();
+        displayQuestions();
+        generateNumericKeypad();
 
-      canvas.addEventListener("touchstart", startDrawing);
-      canvas.addEventListener("touchend", stopDrawing);
-      canvas.addEventListener("touchcancel", stopDrawing);
-      canvas.addEventListener("touchmove", draw);
+        // 确保默认显示手写相关元素，隐藏数字输入相关元素
+        canvas.style.display = 'block';
+        document.getElementById('tool-buttons').style.display = 'flex';
+        document.getElementById('numeric-display').style.display = 'none';
+        document.getElementById('numeric-keypad').style.display = 'none';
 
-      // 初始化
-      setCanvasResolution();
-      generateQuestions();
-      displayQuestions();
-      generateNumericKeypad();
-
-      // 确保默认显示手写相关元素，隐藏数字输入相关元素
-      canvas.style.display = "block";
-      document.getElementById("tool-buttons").style.display = "flex";
-      document.getElementById("numeric-display").style.display = "none";
-      document.getElementById("numeric-keypad").style.display = "none";
-
-      // 调整画布分辨率
-      window.addEventListener("resize", setCanvasResolution);
+        // 调整画布分辨率
+        window.addEventListener('resize', setCanvasResolution);
     </script>
-  </body>
+</body>
 </html>
